@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:milktea_server/common_widgets/dropdown_widget.dart';
 import 'package:milktea_server/common_widgets/text_field_widget.dart';
+import 'package:milktea_server/model/category_item_model.dart';
 import 'package:milktea_server/model/menu_item_model.dart';
 import 'package:milktea_server/utils/toast_utils.dart';
 
@@ -30,6 +31,7 @@ class _MenuItemDialogState extends State<MenuItemDialog> {
   bool isImageLocal = false;
   Uint8List bytes = Uint8List(0);
   String photoUrl = '';
+  List<CategoryItemModel> listCategory = [];
 
   @override
   void initState() {
@@ -39,6 +41,23 @@ class _MenuItemDialogState extends State<MenuItemDialog> {
     priceController.text = _menuItemModel.price?.toString() ?? '';
     descriptionController.text = _menuItemModel.description ?? '';
     photoUrl = _menuItemModel.imageUrl ?? '';
+    getListCategoryItem();
+  }
+
+  Future<void> getListCategoryItem() async {
+    EasyLoading.show();
+    DataSnapshot response =
+        await FirebaseDatabase.instance.ref('category').get();
+    EasyLoading.dismiss();
+    List<CategoryItemModel> listCategoryItems = [];
+    for (var element in response.children) {
+      CategoryItemModel categoryItemModel =
+          CategoryItemModel.fromJson(element.value);
+      listCategoryItems.add(categoryItemModel);
+    }
+    setState(() {
+      listCategory = listCategoryItems;
+    });
   }
 
   @override
@@ -62,8 +81,10 @@ class _MenuItemDialogState extends State<MenuItemDialog> {
                 child: DropDownWidget(
                   label: 'Loại sản phẩm',
                   hintText: 'Chọn loại sản phẩm',
-                  items: const ['Cake', 'Drink', 'Smoothie', "Other"],
-                  initialValue: _menuItemModel.type,
+                  items: listCategory.map((e) => e.name ?? '').toList(),
+                  initialValue: (_menuItemModel.type?.isNotEmpty ?? false)
+                      ? _menuItemModel.type
+                      : listCategory[0].name,
                   onSelect: (value) {
                     _menuItemModel.type = value;
                   },

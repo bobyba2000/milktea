@@ -1,6 +1,7 @@
 import 'package:easy_sidemenu/easy_sidemenu.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:milktea_server/page/category/category_page.dart';
 import 'package:milktea_server/page/menu/menu_page.dart';
 import 'package:milktea_server/page/order/order_page.dart';
 import 'package:milktea_server/page/user/change_pass_dialog.dart';
@@ -99,9 +100,17 @@ class _MainPageState extends State<MainPage> {
               ),
               SideMenuItem(
                 priority: 1,
-                title: 'Đơn Hàng',
+                title: 'Danh mục',
                 onTap: () {
                   page.jumpToPage(1);
+                },
+                icon: const Icon(Icons.apps),
+              ),
+              SideMenuItem(
+                priority: 2,
+                title: 'Đơn Hàng',
+                onTap: () {
+                  page.jumpToPage(2);
                 },
                 icon: const Icon(Icons.assignment),
               ),
@@ -218,6 +227,15 @@ class _MainPageState extends State<MainPage> {
                           child: const Padding(
                             padding: EdgeInsets.all(24),
                             child: MenuPage(),
+                          ),
+                        ),
+                        Container(
+                          color: const Color.fromARGB(255, 241, 241, 241),
+                          child: const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: CategoryPage(),
+                            ),
                           ),
                         ),
                         Container(

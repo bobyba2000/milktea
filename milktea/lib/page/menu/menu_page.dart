@@ -1,6 +1,5 @@
-import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -10,10 +9,25 @@ import 'package:easy_debounce/easy_debounce.dart';
 import 'package:milktea/bloc/menu_bloc.dart';
 import 'package:milktea/common_widget/category_widget.dart';
 import 'package:milktea/helper/format_helper.dart';
+import 'package:milktea/model/category_item_model.dart';
 import 'package:milktea/model/order_model.dart';
 import 'package:milktea/page/menu/order_detail_page.dart';
 import 'package:milktea/service/api_service.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+
+const listIcon = [
+  Icons.cake,
+  Icons.free_breakfast,
+  Icons.local_cafe,
+  Icons.local_bar,
+  Icons.local_dining,
+  Icons.local_drink,
+  Icons.local_pizza,
+  Icons.restaurant,
+  Icons.restaurant_menu,
+  Icons.room_service,
+  Icons.widgets,
+];
 
 class MenuPage extends StatefulWidget {
   final OrderModel orderModel;
@@ -35,24 +49,30 @@ class _MenuPageState extends State<MenuPage> {
   late MenuBloc bloc;
   late OrderModel orderModel;
   int total = 0;
-  final List<IconData> listIcons = const [
-    Iconsax.cake,
-    Iconsax.coffee,
-    Iconsax.milk,
-    Iconsax.more_square,
-  ];
-  final List<String> listCategory = const [
-    'Cake',
-    'Drink',
-    'Smoothie',
-    'Other',
-  ];
+  List<CategoryItemModel> listCategory = [];
 
   @override
   void initState() {
     super.initState();
     bloc = MenuBloc();
     orderModel = widget.orderModel;
+    getListCategoryItem();
+  }
+
+  Future<void> getListCategoryItem() async {
+    EasyLoading.show();
+    DataSnapshot response =
+        await FirebaseDatabase.instance.ref('category').get();
+    EasyLoading.dismiss();
+    List<CategoryItemModel> listCategoryItems = [];
+    for (var element in response.children) {
+      CategoryItemModel categoryItemModel =
+          CategoryItemModel.fromJson(element.value);
+      listCategoryItems.add(categoryItemModel);
+    }
+    setState(() {
+      listCategory = listCategoryItems;
+    });
     onBack();
   }
 
@@ -92,7 +112,7 @@ class _MenuPageState extends State<MenuPage> {
                       children: [
                         SizedBox(
                           width: 150,
-                          child: FormBuilderDropdown<String>(
+                          child: FormBuilderDropdown<CategoryItemModel>(
                             name: '',
                             decoration: const InputDecoration(
                               labelText: 'Danh mục',
@@ -103,16 +123,18 @@ class _MenuPageState extends State<MenuPage> {
                             items: listCategory
                                 .map((menuCateogry) => DropdownMenuItem(
                                       value: menuCateogry,
-                                      child: Text(menuCateogry),
+                                      child: Text(menuCateogry.name ?? ''),
                                     ))
                                 .toList(),
                             onChanged: (value) async {
-                              int position = listCategory.indexOf(value ?? '');
-                              if (position != -1) {
-                                itemScrollController.scrollTo(
-                                  index: position,
-                                  duration: const Duration(milliseconds: 700),
-                                );
+                              if (value != null) {
+                                int position = listCategory.indexOf(value);
+                                if (position != -1) {
+                                  itemScrollController.scrollTo(
+                                    index: position,
+                                    duration: const Duration(milliseconds: 700),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -130,12 +152,12 @@ class _MenuPageState extends State<MenuPage> {
                   Expanded(
                     child: ScrollablePositionedList.builder(
                       itemBuilder: (context, index) => CategoryWidget(
-                        categoryTitle: listCategory[index],
+                        categoryTitle: listCategory[index].name ?? '',
                         listCategoryItems: state.listMenuItem
                             .where((element) =>
-                                element.type == listCategory[index])
+                                element.type == listCategory[index].name)
                             .toList(),
-                        icon: listIcons[index],
+                        icon: listIcon[listCategory[index].icon ?? 0],
                         onSelect: (item) async {
                           orderModel.listOrderItem.add(item);
                           int tot = await calculateTotal();
@@ -144,10 +166,8 @@ class _MenuPageState extends State<MenuPage> {
                             widget.onChangeOrder(orderModel);
                           });
                         },
-                        isShowIceOption: listCategory[index] == 'Drink' ||
-                            listCategory[index] == 'Smoothie',
-                        isShowSugarOption: listCategory[index] == 'Drink' ||
-                            listCategory[index] == 'Smoothie',
+                        isShowIceOption: listCategory[index].isIceOption,
+                        isShowSugarOption: listCategory[index].isSugarOption,
                       ),
                       itemCount: listCategory.length,
                       itemScrollController: itemScrollController,
